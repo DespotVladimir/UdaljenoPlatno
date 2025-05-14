@@ -2,6 +2,8 @@ package Common;
 
 import javafx.scene.paint.Color;
 
+import java.util.Arrays;
+
 public class Message{
 
     public static byte[] getBytes(Shape shape,double v1,double v2,double v3,double v4,double width,Color color){
@@ -26,24 +28,32 @@ public class Message{
         this.width = width;
     }
 
-    public Message(byte[] message){
+    public Message(byte[] message) throws Exception {
         this(new String(message));
     }
 
-    public Message(String message){
+    public Message(String message) throws Exception {
         String[] parts = message.split(";");
-        this.shape = Shape.getShapeByName(parts[0]);
-        this.x1 = Double.parseDouble(parts[1]);
-        this.y1 = Double.parseDouble(parts[2]);
-        this.x2 = Double.parseDouble(parts[3]);
-        this.y2 = Double.parseDouble(parts[4]);
-        this.color = new Color(
-                Double.parseDouble(parts[5]),
-                Double.parseDouble(parts[6]),
-                Double.parseDouble(parts[7]),
-                Double.parseDouble(parts[8])
-        );
-        this.width = Double.parseDouble(parts[9]);
+        try{
+            this.shape = Shape.getShapeByName(parts[0]);
+            this.x1 = Double.parseDouble(parts[1]);
+            this.y1 = Double.parseDouble(parts[2]);
+            this.x2 = Double.parseDouble(parts[3]);
+            this.y2 = Double.parseDouble(parts[4]);
+            this.color = new Color(
+                    Double.parseDouble(parts[5]),
+                    Double.parseDouble(parts[6]),
+                    Double.parseDouble(parts[7]),
+                    Double.parseDouble(parts[8])
+            );
+            this.width = Double.parseDouble(parts[9]);
+        }
+        catch (Exception e){
+            //TODO ukloniti try catch
+            e.printStackTrace();
+            System.err.println(Arrays.toString(parts));
+            throw new Exception(e);
+        }
     }
 
     public byte[] getBytes() {

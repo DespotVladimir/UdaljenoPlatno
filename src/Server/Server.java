@@ -1,6 +1,7 @@
 package Server;
 
 import Common.Message;
+import Common.Room;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 
@@ -8,13 +9,8 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.nio.channels.*;
+import java.util.*;
 
 public class Server {
 
@@ -23,7 +19,7 @@ public class Server {
     public static void main(String[] args)  {
         Canvas c = new Canvas();
         GraphicsContext gc = c.getGraphicsContext2D();
-
+        List<Room> rooms = new ArrayList<>();
         Selector selector = null;
         try {
             selector = Selector.open();
@@ -67,10 +63,10 @@ public class Server {
                                 for(String line: lines)
                                 {
                                     try{
-                                        new Message(line);
+                                        Message msg = new Message(line);
                                         for(SocketChannel sc: clients)
                                         {
-                                            sc.write(ByteBuffer.wrap(line.getBytes()));
+                                            sc.write(ByteBuffer.wrap(msg.getBytes()));
                                         }
                                     }catch (Exception e){
                                         leftover=line;
@@ -85,7 +81,7 @@ public class Server {
 
                     }
                     catch (SocketException e) {
-                        System.err.println("Channel: "+ key +" removed from selector.");
+                        System.err.println("Client disconnected: "+ key);
                         clients.remove(key.channel());
                         key.cancel();
                     }

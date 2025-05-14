@@ -36,15 +36,29 @@ public class ClientConnection extends Thread {
         try{
             ByteBuffer buffer = ByteBuffer.allocate(120);
             socketChannel.configureBlocking(false);
+            Message msg;String leftover="";
             while(!closed) {
                 try {
-                    int n = socketChannel.read(buffer);
-                    if (n > 0) {
+                    int read = socketChannel.read(buffer);
+                    if (read > 0) {
                         buffer.flip();
-                        gui.serverDraw(new Message(buffer.array()));
-                        buffer.clear();
+                        byte[] datas = new byte[buffer.limit()];
+                        buffer.get(datas);
+                        String data = leftover + new String(datas);
+                        leftover="";
+                        String[] lines = data.split("\n");
+                        for(String line: lines)
+                        {
+                            try{
+                                msg = new Message(line);
+                                gui.serverDraw(msg);
+                                buffer.clear();
+                            }catch (Exception e){
+                                leftover=line;
+                            }
+                        }
                     }
-                    else if (n == -1) {
+                    else if (read == -1) {
                         break;
                     }
                 }
@@ -52,7 +66,7 @@ public class ClientConnection extends Thread {
                     throw new RuntimeException(e);
                 }
                 catch (Exception e) {
-                    System.out.println(e.getMessage());
+                    //System.out.println(e.getMessage());
                 }
             }
         } catch (IOException e) {

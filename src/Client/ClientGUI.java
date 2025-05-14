@@ -20,11 +20,7 @@ public class ClientGUI extends Application {
     ClientConnection connection;
 
     public ClientGUI(){
-        try {
-            connection = new ClientConnection(InetAddress.getByName("localhost"),12345,this);
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to connect to the server. ");
-        }
+
     }
 
     public void start(String[] args) throws Exception {
@@ -33,7 +29,17 @@ public class ClientGUI extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
+        initConnection();
         canvasPage(stage);
+    }
+
+    public synchronized void initConnection(){
+        try {
+            connection = new ClientConnection(InetAddress.getByName("localhost"),12345,this);
+            new Thread(connection).start();
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to connect to the server. ");
+        }
     }
 
     private Canvas canvas;
@@ -134,7 +140,7 @@ public class ClientGUI extends Application {
         stage.setTitle("Paint");
         stage.show();
 
-        new Thread(connection).start();
+
     }
 
     public void serverDraw(Message message) {
