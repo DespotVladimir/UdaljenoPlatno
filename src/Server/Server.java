@@ -155,14 +155,16 @@ public class Server {
         } else if (message.startsWith("NSOBA|")) {
             makeNewRoom(message);
         } else if (message.startsWith("SOBE")) {
-            //TODO
+            getListOfRooms(user);
         } else if (message.startsWith("DRAW|")) {
             //TODO
         } else if (message.startsWith("ULAZ|")) {
-            //TODO
+            checkRoomPassword(user, message);
         } else if (message.startsWith("IZLAZ")) {
             //TODO
         } else if (message.startsWith("KRAJ")) {
+            throw new IOException("USER DISCONNECTED");
+        } else if (message.startsWith("INFO|")) {
             //TODO
         } else{
             user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
@@ -205,5 +207,33 @@ public class Server {
 
     }
 
+    private static void getListOfRooms(User user) throws IOException {
+        StringBuilder rooms = new StringBuilder();
+        for(String key : roomMap.keySet()){
+            rooms.append(roomMap.get(key)).append(":").append(key).append(";");
+        }
+        rooms.append("\n");
+        user.getSocket().write(ByteBuffer.wrap(rooms.toString().getBytes()));
+    }
+
+    private static void checkRoomPassword(User user, String message) throws IOException {
+        int start = "ULAZ|".length();
+        message = message.substring(start).trim();
+        String id = message.split(":")[0];
+        String pswd = message.split(":")[1];
+
+        if(roomMap.containsKey(id))
+        {
+            if(roomMap.get(id).getRoomPassword().equals(pswd))
+                user.getSocket().write(ByteBuffer.wrap("POTVRDI\n".getBytes()));
+            else
+                user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+
+        }
+        else
+            user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+    }
+
+    
 
 }
