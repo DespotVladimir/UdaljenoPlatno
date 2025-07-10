@@ -1,99 +1,207 @@
 package Server;
 
-import Common.Message;
 import Common.Room;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
+import Common.User;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Server {
 
-    GraphicsContext gc;
+    public static int PORT = 12345;
+
+    //Mapa soba i id, id se povecava za jedan kada je nova soba napravljena
+    private static Map<String, Room> roomMap;
+
+
+    //Globalna lista korisnika
+    private static List<User> userList;
+
+    private static Selector selector;
 
     public static void main(String[] args)  {
-        Canvas c = new Canvas();
-        GraphicsContext gc = c.getGraphicsContext2D();
-        List<Room> rooms = new ArrayList<>();
-        Selector selector = null;
+
+        roomMap = new HashMap<>();
+        userList = new ArrayList<>();
+
+        selector = null;
         try {
+
+            //Otvaranje servera
             selector = Selector.open();
             ServerSocketChannel server = ServerSocketChannel.open();
-            server.bind(new InetSocketAddress(12345));
+            InetSocketAddress address = new InetSocketAddress("localhost", PORT);
+            server.bind(address);
             server.configureBlocking(false);
             server.register(selector, SelectionKey.OP_ACCEPT);
-            System.err.println("Server started");
-            HashSet<SocketChannel> clients = new HashSet<>();
-            String leftover="";
+            System.err.println("Server started on address: "+ InetAddress.getLocalHost().getHostAddress() + ", port: " + PORT);
+
             while (true) {
-                selector.select();
+                try{
+                    selector.select();
 
-                Set<SelectionKey> keys = selector.selectedKeys();
-                Iterator<SelectionKey> iter = keys.iterator();
-                ByteBuffer buffer = ByteBuffer.allocate(1024);
+                    Set<SelectionKey> keys = selector.selectedKeys();
+                    Iterator<SelectionKey> iter = keys.iterator();
 
-                while (iter.hasNext()) {
-                    SelectionKey key = iter.next();
-                    iter.remove();
-                    try{
-                        if (key.isAcceptable()) {
-                            ServerSocketChannel srv = (ServerSocketChannel) key.channel();
-                            SocketChannel client = srv.accept();
-                            client.configureBlocking(false);
-                            client.register(selector, SelectionKey.OP_READ|SelectionKey.OP_WRITE);
-                            clients.add(client);
-                            System.err.println("Client accepted. " + client.getRemoteAddress());
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
+                        iter.remove();
+                        try{
+                            if (key.isAcceptable()) {
+                                acceptClient(key);
+                            }
+                            else if (key.isReadable()) {
+                                readFromClient(key);
+                            }
 
                         }
-                        else if (key.isReadable()) {
-                            SocketChannel client = (SocketChannel) key.channel();
-                            int read = client.read(buffer);
-                            if (read > 0) {
-                                buffer.flip();
-                                byte[] datas = new byte[buffer.limit()];
-                                buffer.get(datas);
-                                String data = leftover + new String(datas);
-                                leftover="";
-                                String[] lines = data.split("\n");
-                                for(String line: lines)
-                                {
-                                    try{
-                                        Message msg = new Message(line);
-                                        for(SocketChannel sc: clients)
-                                        {
-                                            sc.write(ByteBuffer.wrap(msg.getBytes()));
-                                        }
-                                    }catch (Exception e){
-                                        leftover=line;
-                                    }
-                                }
-                                client.write(buffer);
-                            }
-                            else {
-                                client.close();
-                            }
+                        catch (SocketException e) {
+                            removeClient(key);
                         }
-
                     }
-                    catch (SocketException e) {
-                        System.err.println("Client disconnected: "+ key);
-                        clients.remove(key.channel());
-                        key.cancel();
-                    }
+                } catch (Exception e) {
+                    System.err.println(e.getMessage());
                 }
-
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void acceptClient(SelectionKey key) throws IOException {
+        ServerSocketChannel srv = (ServerSocketChannel) key.channel();
+        SocketChannel client = srv.accept();
+        client.configureBlocking(false);
+
+        SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ|SelectionKey.OP_WRITE);
+
+        User u = new User(null,null,client);
+        userList.add(u);
+
+        clientKey.attach(u);
+
+        System.err.println("Client accepted. " + client.getRemoteAddress());
+    }
+
+    private static void removeClient(SelectionKey key) throws IOException {
+        User u = (User) key.attachment();
+        String room = u.getRoomID();
+
+        if(roomMap.containsKey(room))
+            roomMap.get(room).getUsers().remove(u);
+        userList.remove(u);
+
+        key.attach(null);
+        key.channel().close();
+        key.cancel();
+        System.err.println("Client disconnected: "+ key);
+    }
+
+    private static void readFromClient(SelectionKey key) throws IOException {
+
+        // Cita naredbe klijenta koje su cijele tj. sadrze '\n' na kraju pa ih obradjuje
+        // Ako nisu cijele ostatak ostaje u bufferu
+
+        User user = (User) key.attachment();
+
+        ByteBuffer buffer = user.getBuffer();
+        int bytesRead = user.getSocket().read(buffer);
+        if (bytesRead == -1) {
+            removeClient(key);
+            return;
+        }
+
+        buffer.flip();
+        while (buffer.hasRemaining()) {
+            int startPos = buffer.position();
+            int limit = buffer.limit();
+            int newlinePos = -1;
+
+            for (int i = startPos; i < limit; i++) {
+                if (buffer.get(i) == '\n') {
+                    newlinePos = i;
+                    break;
+                }
+            }
+
+            if (newlinePos == -1) {
+                buffer.position(startPos);
+                buffer.limit(limit);
+                buffer.compact();
+                return;
+            }
 
 
+            int messageLength = newlinePos - startPos + 1;
+            byte[] messageBytes = new byte[messageLength];
+            buffer.get(messageBytes);
 
+            String message = new String(messageBytes, StandardCharsets.UTF_8).trim();
+            System.out.println(message);
+            proccesRequest(user,message);
+        }
+        buffer.compact();
+    }
+
+    private static void proccesRequest(User user, String message) throws IOException {
+        if(message.startsWith("IME|")){
+            getUserName(user,message);
+        } else if (message.startsWith("NSOBA|")) {
+            makeNewRoom(message);
+        } else if (message.startsWith("SOBE")) {
+            //TODO
+        } else if (message.startsWith("DRAW|")) {
+            //TODO
+        } else if (message.startsWith("ULAZ|")) {
+            //TODO
+        } else if (message.startsWith("IZLAZ")) {
+            //TODO
+        } else if (message.startsWith("KRAJ")) {
+            //TODO
+        } else{
+            user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+        }
+    }
+
+
+    private static void getUserName(User user,String s) throws IOException {
+        int start = "IME|".length();
+        s = s.substring(start);
+        if(isNameAvailable(s))
+        {
+            user.setName(s);
+            user.getSocket().write(ByteBuffer.wrap("POTVRDI\n".getBytes()));
+        }
+        else
+            user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+    }
+
+    private static boolean isNameAvailable(String name){
+        for(User u : userList)
+        {
+            if(u.getName()==null)
+                continue;
+
+            if(u.getName().equals(name))
+                return false;
+        }
+        return true;
+    }
+
+    private static void makeNewRoom(String s) {
+        int start = "NSOBA|".length();
+        String roomName = s.substring(start).split(";")[0];
+        String roomPswd = s.substring(start).split(";")[1];
+
+        String RoomID = UUID.randomUUID().toString().substring(0, 8);
+        Room r = new Room(roomPswd,roomName,RoomID);
+        roomMap.put(RoomID,r);
 
     }
 

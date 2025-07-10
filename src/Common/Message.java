@@ -7,7 +7,7 @@ import java.util.Arrays;
 public class Message{
 
     public static byte[] getBytes(Shape shape,double v1,double v2,double v3,double v4,double width,Color color){
-        String returnBytes = String.format("%s;%.2f;%.2f;%.2f;%.2f;%f;%f;%f;%f;%f\n",
+        String returnBytes = String.format("CRTAJ|%s;%.2f;%.2f;%.2f;%.2f;%f;%f;%f;%f;%f\n",
                 shape.toString(),v1,v2,v3,v4,color.getRed(),color.getGreen(),color.getBlue(),color.getOpacity(),width);
         return returnBytes.getBytes();
     }
@@ -33,7 +33,7 @@ public class Message{
     }
 
     public Message(String message) throws Exception {
-        String[] parts = message.split(";");
+        String[] parts = (message.split("\\|")[0]).split(";");
         try{
             this.shape = Shape.getShapeByName(parts[0]);
             this.x1 = Double.parseDouble(parts[1]);
@@ -49,7 +49,6 @@ public class Message{
             this.width = Double.parseDouble(parts[9]);
         }
         catch (Exception e){
-            //TODO ukloniti try catch
             e.printStackTrace();
             System.err.println(Arrays.toString(parts));
             throw new Exception(e);
