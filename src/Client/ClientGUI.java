@@ -18,6 +18,7 @@ import java.net.SocketException;
 public class ClientGUI extends Application {
 
     ClientConnection connection;
+    Thread connectionThread;
 
     public ClientGUI(){
 
@@ -36,7 +37,8 @@ public class ClientGUI extends Application {
     public synchronized void initConnection(){
         try {
             connection = new ClientConnection(InetAddress.getByName("localhost"),12345,this);
-            new Thread(connection).start();
+            connectionThread = new Thread(connection);
+            connectionThread.start();
         } catch (IOException e) {
             throw new RuntimeException("Unable to connect to the server. ");
         }
