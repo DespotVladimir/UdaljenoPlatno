@@ -5,7 +5,8 @@ public class Client {
     static ClientGUI gui;
 
     public static void main(String[] args) throws Exception {
-        gui = new ClientGUI();
-        gui.start(args);
+       gui = new ClientGUI();
+       gui.start(args);
+
     }
 }

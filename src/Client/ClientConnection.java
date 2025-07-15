@@ -26,6 +26,10 @@ public class ClientConnection extends Thread {
         socketChannel.write(ByteBuffer.wrap(message.getBytes()));
     }
 
+    public void sendRawMessage(String message) throws IOException {
+        socketChannel.write(ByteBuffer.wrap((message + "\n").getBytes()));
+    }
+
     private boolean closed = false;
     public void setClosed(boolean closed) {
         this.closed = closed;

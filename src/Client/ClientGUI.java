@@ -3,9 +3,12 @@ package Client;
 import Common.Message;
 import Common.Shape;
 import javafx.application.Application;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
+import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -17,8 +20,16 @@ import java.net.SocketException;
 
 public class ClientGUI extends Application {
 
+    private CreateRoomScene createRoomScene;
     ClientConnection connection;
     Thread connectionThread;
+
+    private ListView <String> sobeLista;
+
+    public ClientConnection getConnection() {
+        return connection;
+    }
+
 
     public ClientGUI(){
 
@@ -31,7 +42,8 @@ public class ClientGUI extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         initConnection();
-        canvasPage(stage);
+        //canvasPage(stage);
+        showStartScene(stage);
     }
 
     public synchronized void initConnection(){
@@ -43,6 +55,28 @@ public class ClientGUI extends Application {
             throw new RuntimeException("Unable to connect to the server. ");
         }
     }
+
+    public void showStartScene(Stage stage) {
+        VBox root = new VBox(15);
+        root.setAlignment(Pos.CENTER);
+
+        Button btnCreateRoom = new Button("Kreiraj sobu");
+
+        btnCreateRoom.setOnAction(e -> {
+            if (createRoomScene == null) {
+                createRoomScene = new CreateRoomScene(this, stage);
+            }
+            createRoomScene.prikazi();
+        });
+
+        root.getChildren().add(btnCreateRoom);
+
+        Scene scene = new Scene(root, 400, 300);
+        stage.setScene(scene);
+        stage.setTitle("Lista soba");
+        stage.show();
+    }
+
 
     private Canvas canvas;
     public void canvasPage(Stage stage){
