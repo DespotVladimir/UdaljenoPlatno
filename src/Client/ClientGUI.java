@@ -22,6 +22,8 @@ import java.util.Optional;
 
 public class ClientGUI extends Application {
 
+    private String korisnickoIme;
+
     private CreateRoomScene createRoomScene;
     ClientConnection connection;
     Thread connectionThread;
@@ -30,6 +32,14 @@ public class ClientGUI extends Application {
 
     public ClientConnection getConnection() {
         return connection;
+    }
+
+    public void setUsername(String korisnickoIme) {
+        this.korisnickoIme = korisnickoIme;
+    }
+
+    public void setConnection(ClientConnection connection) {
+        this.connection = connection;
     }
 
 

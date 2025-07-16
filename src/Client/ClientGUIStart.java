@@ -12,6 +12,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.net.InetAddress;
+
 public class ClientGUIStart extends Application {
     public static void main(String[] args) {
         launch(args);
@@ -44,6 +46,25 @@ public class ClientGUIStart extends Application {
         stage.setScene(scene);
         stage.setTitle("Client");
         stage.show();
+
+        btnConnect.setOnAction(e -> {
+            String ime = txtName.getText().trim();
+            if (!ime.isEmpty()) {
+                try {
+                    ClientGUI clientGUI = new ClientGUI();
+                    clientGUI.setUsername(ime);
+                    ClientConnection connection = new ClientConnection(InetAddress.getByName("localhost"), 12345, clientGUI);
+                    clientGUI.setConnection(connection);
+                    connection.setGui(clientGUI);
+                    new Thread(connection).start();
+                    clientGUI.start(new Stage());
+                    stage.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
 
     }
 }

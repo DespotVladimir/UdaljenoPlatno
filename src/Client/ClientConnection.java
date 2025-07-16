@@ -78,4 +78,7 @@ public class ClientConnection extends Thread {
         }
 
     }
+    public void setGui(ClientGUI gui) {
+        this.gui = gui;
+    }
 }

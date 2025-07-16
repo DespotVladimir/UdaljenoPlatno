@@ -61,9 +61,10 @@ public class CreateRoomScene {
 
             String poruka;
             if(lozinka.isEmpty()){
-                poruka="$NSOBA|" + naziv + "";
+                poruka = "$NSOBA|" + naziv + "|$";
             }else {
-                poruka="$NSOBA|{" + naziv + "};{" + lozinka + "}$";
+                poruka = "$NSOBA|" + naziv + "|" + lozinka + "$";
+
             }
 
             try {
