@@ -9,6 +9,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -17,6 +18,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.Optional;
 
 public class ClientGUI extends Application {
 
@@ -43,7 +45,7 @@ public class ClientGUI extends Application {
     public void start(Stage stage) throws Exception {
         initConnection();
         //canvasPage(stage);
-        showStartScene(stage);
+        ListaSobaScene(stage);
     }
 
     public synchronized void initConnection(){
@@ -56,7 +58,7 @@ public class ClientGUI extends Application {
         }
     }
 
-    public void showStartScene(Stage stage) {
+    public void ListaSobaScene(Stage stage) {
         VBox root = new VBox(15);
         root.setAlignment(Pos.CENTER);
 
@@ -69,7 +71,35 @@ public class ClientGUI extends Application {
             createRoomScene.prikazi();
         });
 
-        root.getChildren().add(btnCreateRoom);
+        sobeLista=new ListView<>();
+        sobeLista.setPrefHeight(150);
+        sobeLista.setPrefWidth(200);
+        sobeLista.getItems().addAll("Soba1","Soba2","Soba3");
+
+        Button btnUlazSoba=new Button("Uđi u sobu");
+
+        btnUlazSoba.setOnAction(e -> {
+            String selektovanaSoba = sobeLista.getSelectionModel().getSelectedItem();
+            if (selektovanaSoba != null) {
+                TextInputDialog dialog = new TextInputDialog();
+                dialog.setTitle("Ulazak u sobu");
+                dialog.setHeaderText("Soba \"" + selektovanaSoba + "\" može biti zaštićena.");
+                dialog.setContentText("Unesite šifru (ostavite prazno ako nema):");
+
+                Optional<String> result = dialog.showAndWait();
+                result.ifPresent(password -> {
+                    try {
+                        connection.sendRawMessage("JOIN|" + selektovanaSoba + "|" + password);
+                        canvasPage(stage);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                });
+            }
+        });
+
+
+        root.getChildren().addAll(sobeLista,btnCreateRoom,btnUlazSoba);
 
         Scene scene = new Scene(root, 400, 300);
         stage.setScene(scene);
