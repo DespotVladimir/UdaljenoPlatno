@@ -74,6 +74,11 @@ public class Server {
         }
     }
 
+    private static void sendMessageToUser(User user, String message) throws IOException {
+        message = message.trim() + "\n";
+        user.getSocket().write(ByteBuffer.wrap(message.getBytes()));
+    }
+
     private static void acceptClient(SelectionKey key) throws IOException {
         ServerSocketChannel srv = (ServerSocketChannel) key.channel();
         SocketChannel client = srv.accept();
@@ -150,24 +155,26 @@ public class Server {
     }
 
     private static void proccesRequest(User user, String message) throws IOException {
-        if(message.startsWith("IME|")){
+        if(message.startsWith("IME|")){ // IME|ime
             getUserName(user,message);
-        } else if (message.startsWith("NSOBA|")) {
+        } else if (message.startsWith("NSOBA|")) { // NSOBA|naziv;lozinka
             makeNewRoom(message);
-        } else if (message.startsWith("SOBE")) {
+        } else if (message.startsWith("SOBE")) { // SOBE
             getListOfRooms(user);
-        } else if (message.startsWith("DRAW|")) {
+        } else if (message.startsWith("CRTAJ|")) { // CRTAJ|oblik;x1;y1;x2;y2;R;G;B;O;W
             //TODO
-        } else if (message.startsWith("ULAZ|")) {
+        } else if (message.startsWith("ULAZ|")) { // ULAZ|id;lozinka
             checkRoomPassword(user, message);
-        } else if (message.startsWith("IZLAZ")) {
-            //TODO
-        } else if (message.startsWith("KRAJ")) {
+        } else if (message.startsWith("IZLAZ")) { // IZLAZ
+            exitUserFromRoom(user);
+        } else if (message.startsWith("KRAJ")) { // KRAJ
             throw new IOException("USER DISCONNECTED");
-        } else if (message.startsWith("INFO|")) {
-            //TODO
+        } else if (message.startsWith("INFO|")) { // INFO|id
+            getRoomInfo(user,message);
+        } else if (message.startsWith("PLATNO")) { // PLATNO|id
+           //TODO
         } else{
-            user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+            sendMessageToUser(user,"ERROR");
         }
     }
 
@@ -178,10 +185,10 @@ public class Server {
         if(isNameAvailable(s))
         {
             user.setName(s);
-            user.getSocket().write(ByteBuffer.wrap("POTVRDI\n".getBytes()));
+            sendMessageToUser(user,"POTVRDI");
         }
         else
-            user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+            sendMessageToUser(user,"ERROR");
     }
 
     private static boolean isNameAvailable(String name){
@@ -208,12 +215,15 @@ public class Server {
     }
 
     private static void getListOfRooms(User user) throws IOException {
+
+        // Vraca listu oblika ime:kljuc_sobe odvojena ';'
+
         StringBuilder rooms = new StringBuilder();
         for(String key : roomMap.keySet()){
             rooms.append(roomMap.get(key)).append(":").append(key).append(";");
         }
-        rooms.append("\n");
-        user.getSocket().write(ByteBuffer.wrap(rooms.toString().getBytes()));
+        rooms.deleteCharAt(rooms.length()-1);
+        sendMessageToUser(user,rooms.toString());
     }
 
     private static void checkRoomPassword(User user, String message) throws IOException {
@@ -225,15 +235,47 @@ public class Server {
         if(roomMap.containsKey(id))
         {
             if(roomMap.get(id).getRoomPassword().equals(pswd))
-                user.getSocket().write(ByteBuffer.wrap("POTVRDI\n".getBytes()));
+                sendMessageToUser(user,"POTVRDI");
             else
-                user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
-
+                sendMessageToUser(user,"ERROR"); 
         }
         else
-            user.getSocket().write(ByteBuffer.wrap("ERROR\n".getBytes()));
+            sendMessageToUser(user,"ERROR");
     }
 
+    private static void getRoomInfo(User user, String message) throws IOException {
+
+        // Vraca listu korisnika sobe odvojene ';'
+
+        int start = "INFO|".length();
+        String id = message.substring(start).trim();
+        if(!roomMap.containsKey(id)){
+            sendMessageToUser(user,"ERROR");
+            return;
+        }
+        StringBuilder users = new StringBuilder();
+        for(User u : roomMap.get(id).getUsers()){
+            users.append(u.getName()).append(";");
+        }
+        sendMessageToUser(user,users.toString());
+    }
+
+    private static void checkRoomStatus(String roomID){
+
+        // Brise sobu ako nema niko u njoj kada neko izadje
+
+        if(roomMap.containsKey(roomID))
+            if(roomMap.get(roomID).getUsers().isEmpty())
+                roomMap.remove(roomID);
+    }
+
+    private static void exitUserFromRoom(User user) {
+        if(roomMap.containsKey(user.getRoomID())){
+            roomMap.remove(user.getRoomID());
+            checkRoomStatus(user.getRoomID());
+            user.setRoomID(null);
+        }
+    }
     
 
 }
