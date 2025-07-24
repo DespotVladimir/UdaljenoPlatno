@@ -4,30 +4,34 @@ import Common.Message;
 
 import java.io.*;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.net.Socket;
 
 public class ClientConnection extends Thread {
 
-    SocketAddress socketAddress;
-    SocketChannel socketChannel;
 
-    ClientGUI gui;
+    private Socket socket;
+    private BufferedReader in;
+    private BufferedWriter out;
+
+    private ClientGUI gui;
 
     ClientConnection(InetAddress address, int port, ClientGUI gui) throws IOException {
-        this.socketAddress = new InetSocketAddress(address, port);
-        this.socketChannel = SocketChannel.open(socketAddress);
+        this.socket = new Socket(address, port);
+        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         this.gui = gui;
     }
 
-    public void sendMessage(Message message) throws IOException {
-        socketChannel.write(ByteBuffer.wrap(message.getBytes()));
+    public void sendMessage(String message) throws IOException {
+        message = message.trim() + "\n";
+        out.write(message);
+        out.flush();
     }
 
-    public void sendRawMessage(String message) throws IOException {
-        socketChannel.write(ByteBuffer.wrap((message + "\n").getBytes()));
+    public void sendDrawMessage(Message message) throws IOException {
+        String send = message.toString().trim() + "\n";
+        out.write(send);
+        out.flush();
     }
 
     private boolean closed = false;
@@ -35,49 +39,36 @@ public class ClientConnection extends Thread {
         this.closed = closed;
     }
 
+    private boolean drawing = false;
+    public void setDrawing(boolean drawing) {
+        this.drawing = drawing;
+    }
+
     @Override
     public void run() {
         try{
-            ByteBuffer buffer = ByteBuffer.allocate(120);
-            socketChannel.configureBlocking(false);
-            Message msg;String leftover="";
             while(!closed) {
-                try {
-                    int read = socketChannel.read(buffer);
-                    if (read > 0) {
-                        buffer.flip();
-                        byte[] datas = new byte[buffer.limit()];
-                        buffer.get(datas);
-                        String data = leftover + new String(datas);
-                        leftover="";
-                        String[] lines = data.split("\n");
-                        for(String line: lines)
-                        {
-                            try{
-                                msg = new Message(line);
-                                gui.serverDraw(msg);
-                                buffer.clear();
-                            }catch (Exception e){
-                                leftover=line;
-                            }
-                        }
+                try{
+                    String message = in.readLine();
+                    if(!drawing) {
+                        Message msg = new Message(message);
+                        gui.serverDraw(msg);
                     }
-                    else if (read == -1) {
-                        break;
-                    }
-                }
-                catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                catch (Exception e) {
-                    //System.out.println(e.getMessage());
+                }catch (IOException e){
+                    System.out.println(e.getMessage());
                 }
             }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            in.close();
+            out.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
+
     public void setGui(ClientGUI gui) {
         this.gui = gui;
     }

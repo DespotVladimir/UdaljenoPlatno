@@ -61,14 +61,14 @@ public class CreateRoomScene {
 
             String poruka;
             if(lozinka.isEmpty()){
-                poruka = "$NSOBA|" + naziv + "|$";
+                poruka = "NSOBA|" + naziv + ";";
             }else {
-                poruka = "$NSOBA|" + naziv + "|" + lozinka + "$";
+                poruka = "NSOBA|" + naziv + ";" + lozinka;
 
             }
 
             try {
-                gui.getConnection().sendRawMessage(poruka);
+                gui.getConnection().sendMessage(poruka);
             } catch (Exception e) {
                 pokazatiAlert("Greška prilikom slanja poruke serveru.");
             }

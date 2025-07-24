@@ -2,6 +2,7 @@ package Common;
 
 import javafx.scene.paint.Color;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 public class Message{
@@ -28,11 +29,11 @@ public class Message{
         this.width = width;
     }
 
-    public Message(byte[] message) throws Exception {
+    public Message(byte[] message) throws IOException {
         this(new String(message));
     }
 
-    public Message(String message) throws Exception {
+    public Message(String message) throws IOException {
         String[] parts = (message.split("\\|")[0]).split(";");
         try{
             this.shape = Shape.getShapeByName(parts[0]);
@@ -51,7 +52,7 @@ public class Message{
         catch (Exception e){
             e.printStackTrace();
             System.err.println(Arrays.toString(parts));
-            throw new Exception(e);
+            throw new IOException(e);
         }
     }
 
@@ -69,6 +70,23 @@ public class Message{
 
     public Color getColor() {
         return color;
+    }
+
+    public double getWidth() {
+        return width;
+    }
+
+    public void setCoordinates(double x1, double y1, double x2, double y2) {
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+    }
+
+    public String getFormatedMessage(){
+        return String.format("CRTAJ|%s;%.2f;%.2f;%.2f;%.2f;%f;%f;%f;%f;%f\n",
+                shape.toString(),x1,y1,x2,y2,color.getRed(),color.getGreen(),color.getBlue(),color.getOpacity(),width);
+
     }
 
     @Override

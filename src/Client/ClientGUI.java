@@ -99,7 +99,7 @@ public class ClientGUI extends Application {
                 Optional<String> result = dialog.showAndWait();
                 result.ifPresent(password -> {
                     try {
-                        connection.sendRawMessage("JOIN|" + selektovanaSoba + "|" + password);
+                        connection.sendMessage("JOIN|" + selektovanaSoba + "|" + password);
                         canvasPage(stage);
                     } catch (IOException ex) {
                         ex.printStackTrace();
@@ -244,7 +244,7 @@ public class ClientGUI extends Application {
     public void sendMessageToServer(Shape shape, double x1, double y1, double x2, double y2,double width, Color color) throws SocketException {
         try{
             Message msg = new Message(shape,x1,y1,x2,y2,width,color);
-            connection.sendMessage(msg);
+            connection.sendDrawMessage(msg);
         } catch (SocketException e) {
             throw new SocketException(e);
         } catch (IOException e) {
