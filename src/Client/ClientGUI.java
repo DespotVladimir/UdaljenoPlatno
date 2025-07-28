@@ -3,14 +3,14 @@ package Client;
 import Common.Message;
 import Common.Shape;
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -29,6 +29,7 @@ public class ClientGUI extends Application {
     Thread connectionThread;
 
     private ListView <String> sobeLista;
+
 
     public ClientConnection getConnection() {
         return connection;
@@ -54,7 +55,7 @@ public class ClientGUI extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         initConnection();
-        //canvasPage(stage);
+        canvasPage(stage);
         ListaSobaScene(stage);
     }
 
@@ -116,6 +117,27 @@ public class ClientGUI extends Application {
         stage.setTitle("Lista soba");
         stage.show();
     }
+
+    private HBox createToolbar(Stage stage, ComboBox<Shape> shapeBox, ColorPicker colorPicker) {
+        HBox toolbar = new HBox(15);
+        toolbar.setPadding(new Insets(10));
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setStyle("-fx-background-color: #dddddd;");
+
+        Button btnNazad = new Button("Nazad");
+        btnNazad.setOnAction(e -> ListaSobaScene(stage));
+
+        Label lblOblik = new Label("Oblik:");
+        shapeBox.getItems().addAll(Shape.LINE, Shape.RECT, Shape.OVAL, Shape.REST);
+        shapeBox.setValue(Shape.LINE);
+
+        Label lblBoja = new Label("Boja:");
+
+        toolbar.getChildren().addAll(btnNazad, lblOblik, shapeBox, lblBoja, colorPicker);
+
+        return toolbar;
+    }
+
 
 
     private Canvas canvas;
@@ -208,7 +230,19 @@ public class ClientGUI extends Application {
 
         canvasBG.getChildren().add(canvas);
         canvasBG.setMaxWidth(600);
-        root.getChildren().add(canvasBG);
+
+
+        ComboBox<Shape> shapeBox = new ComboBox<>();
+        ColorPicker colorPicker = new ColorPicker(Color.BLACK);
+        HBox toolbar = createToolbar(stage, shapeBox, colorPicker);
+        color[0] = colorPicker.getValue();
+        shape[0] = shapeBox.getValue();
+
+
+
+
+
+        root.getChildren().addAll(toolbar,canvasBG);
         Scene scene = new Scene(root,800,600);
         canvasBG.setStyle("-fx-background-color: #ffffff;");
         root.setStyle("-fx-background-color: #767575;");

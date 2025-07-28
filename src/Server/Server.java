@@ -291,6 +291,7 @@ public class Server extends Application {
 
     }
 
+
     private static void getListOfRooms(User user) throws IOException {
 
         // Vraca listu oblika ime:kljuc_sobe odvojena ';'
