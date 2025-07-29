@@ -119,7 +119,7 @@ public class Server extends Application {
         System.err.println("Client disconnected: "+ key);
     }
 
-    private static void readFromClient(SelectionKey key) throws IOException {
+    private static void readFromClient(SelectionKey key) throws IOException, InterruptedException {
 
         // Cita naredbe klijenta koje su cijele tj. sadrze '\n' na kraju pa ih obradjuje
         // Ako nisu cijele ostatak ostaje u bufferu
@@ -160,12 +160,12 @@ public class Server extends Application {
 
             String message = new String(messageBytes, StandardCharsets.UTF_8).trim();
             System.out.println(message); // TODO REMOVE
-            proccesRequest(user,message);
+            processRequest(user,message);
         }
         buffer.compact();
     }
 
-    private static void proccesRequest(User user, String message) throws IOException {
+    private static void processRequest(User user, String message) throws IOException, InterruptedException {
         if(message.startsWith("IME|")){ // IME|ime
             getUserName(user,message);
         } else if (message.startsWith("NSOBA|")) { // NSOBA|naziv;lozinka
@@ -241,7 +241,7 @@ public class Server extends Application {
             sendMessageToUser(user,"ERROR");
     }
 
-    private static void getCanvasImage(User user, String s) throws IOException {
+    private static void getCanvasImage(User user, String s) throws IOException, InterruptedException {
         int start = "PLATNO|".length();
         s = s.substring(start);
 

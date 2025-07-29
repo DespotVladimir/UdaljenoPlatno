@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class Room {
     private String roomPassword;
@@ -76,14 +77,17 @@ public class Room {
 
     }
 
-    public String exportCanvasToBase64() throws IOException {
+    public String exportCanvasToBase64() throws IOException, InterruptedException {
         int width = (int) canvas.getWidth();
         int height = (int) canvas.getHeight();
 
         WritableImage writableImage = new WritableImage(width, height);
+        CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(()->{
             canvas.snapshot(null, writableImage);
+            latch.countDown();
         });
+        latch.await();
 
         BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         PixelReader pixelReader = writableImage.getPixelReader();
