@@ -152,11 +152,18 @@ public class ClientGUI extends Application {
         final double[] pressedY = new double[1];
         final double[] width = {gc.getLineWidth()};
 
-        final Color[] color = {Color.BLACK};
+        ComboBox<Shape> shapeBox=new ComboBox<>();
+        ColorPicker cololrPicker=new ColorPicker(Color.BLACK);
+        HBox toolbar=createToolbar(stage,shapeBox,cololrPicker);
 
-        final Shape[] shape = {Shape.LINE};
+        final Shape[] shape={shapeBox.getValue()!=null ? shapeBox.getValue():Shape.LINE};
+        final  Color[] color = {cololrPicker.getValue()};
 
-        canvas.setOnMousePressed(event->{
+        shapeBox.valueProperty().addListener((obs,oldVal,newVal)->shape[0]=newVal);
+        cololrPicker.valueProperty().addListener((obs,oldVal,newVal)->color[0]=newVal);
+
+
+        /*canvas.setOnMousePressed(event->{
             pressedX[0] = event.getX();
             pressedY[0] = event.getY();
             MouseButton button = event.getButton();
@@ -180,11 +187,18 @@ public class ClientGUI extends Application {
                 }
             }
             gc.setStroke(color[0]);
+        });*/
+
+        canvas.setOnMousePressed(event -> {
+            pressedX[0] = event.getX();
+            pressedY[0] = event.getY();
+            gc.setStroke(color[0]);
         });
 
         canvas.setOnMouseDragged(event->{
             double currentX = event.getX();
             double currentY = event.getY();
+
 
             if(shape[0]==Shape.LINE){
                 gc.strokeLine(pressedX[0], pressedY[0], currentX, currentY);
@@ -230,16 +244,6 @@ public class ClientGUI extends Application {
 
         canvasBG.getChildren().add(canvas);
         canvasBG.setMaxWidth(600);
-
-
-        ComboBox<Shape> shapeBox = new ComboBox<>();
-        ColorPicker colorPicker = new ColorPicker(Color.BLACK);
-        HBox toolbar = createToolbar(stage, shapeBox, colorPicker);
-        color[0] = colorPicker.getValue();
-        shape[0] = shapeBox.getValue();
-
-
-
 
 
         root.getChildren().addAll(toolbar,canvasBG);
