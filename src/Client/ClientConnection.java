@@ -1,6 +1,7 @@
 package Client;
 
 import Common.Message;
+import javafx.application.Platform;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -50,6 +51,14 @@ public class ClientConnection extends Thread {
             while(!closed) {
                 try{
                     String message = in.readLine();
+
+                    if (message.startsWith("NSOBA|OK|")) {
+                        String imeSobe = message.substring("NSOBA|OK|".length());
+                        Platform.runLater(() -> gui.dodajSobu(imeSobe));
+                    }
+
+
+
                     if(!drawing) {
                         Message msg = new Message(message);
                         gui.serverDraw(msg);

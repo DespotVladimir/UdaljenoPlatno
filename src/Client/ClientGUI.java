@@ -69,6 +69,13 @@ public class ClientGUI extends Application {
         }
     }
 
+
+    public void dodajSobu(String novaSoba){
+        if(!sobeLista.getItems().contains(novaSoba)){
+            sobeLista.getItems().add(novaSoba);
+        }
+    }
+
     public void ListaSobaScene(Stage stage) {
         VBox root = new VBox(15);
         root.setAlignment(Pos.CENTER);
@@ -87,7 +94,9 @@ public class ClientGUI extends Application {
         sobeLista.setPrefWidth(200);
         sobeLista.getItems().addAll("Soba1","Soba2","Soba3");
 
+
         Button btnUlazSoba=new Button("Uđi u sobu");
+
 
         btnUlazSoba.setOnAction(e -> {
             String selektovanaSoba = sobeLista.getSelectionModel().getSelectedItem();

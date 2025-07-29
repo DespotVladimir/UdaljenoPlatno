@@ -14,6 +14,8 @@ public class CreateRoomScene {
     private ClientGUI gui;
     private Stage stage;
 
+
+
     public CreateRoomScene(ClientGUI gui, Stage stage){
         this.gui=gui;
         this.stage=stage;
@@ -48,6 +50,9 @@ public class CreateRoomScene {
         stage.setScene(scene);
         stage.setTitle("Kreiraj sobe");
         stage.show();
+
+        btnNazad.setOnAction(e -> gui.ListaSobaScene(stage));
+
 
 
         btnKreiraj.setOnAction(actionEvent -> {
