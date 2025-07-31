@@ -24,6 +24,7 @@ public class ClientGUI extends Application {
 
     private String korisnickoIme;
 
+
     private CreateRoomScene createRoomScene;
     ClientConnection connection;
     Thread connectionThread;
@@ -70,11 +71,10 @@ public class ClientGUI extends Application {
     }
 
 
-    public void dodajSobu(String novaSoba){
-        if(!sobeLista.getItems().contains(novaSoba)){
-            sobeLista.getItems().add(novaSoba);
-        }
+    public void dodajSobu(String imeSobe) {
+        sobeLista.getItems().add(imeSobe);
     }
+
 
     public void ListaSobaScene(Stage stage) {
         VBox root = new VBox(15);
@@ -95,7 +95,12 @@ public class ClientGUI extends Application {
         sobeLista.getItems().addAll("Soba1","Soba2","Soba3");
 
 
+
+
         Button btnUlazSoba=new Button("Uđi u sobu");
+
+
+
 
 
         btnUlazSoba.setOnAction(e -> {
@@ -298,6 +303,22 @@ public class ClientGUI extends Application {
             throw new RuntimeException(e);
         }
     }
+
+    public void osveziListuSoba(String[] sobe) {
+        javafx.application.Platform.runLater(() -> {
+            sobeLista.getItems().setAll(sobe);
+        });
+    }
+
+
+    public void primiPoruku(String poruka) {
+        if (poruka.startsWith("SOBE|")) {
+            String listaSoba = poruka.substring(5);
+            String[] sobe = listaSoba.split(";");
+            osveziListuSoba(sobe);
+        }
+    }
+
 
     @Override
     public void stop() throws Exception {

@@ -21,6 +21,8 @@ public class ClientConnection extends Thread {
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         this.gui = gui;
+
+        gui.setConnection(this);
     }
 
     public void sendMessage(String message) throws IOException {
@@ -52,9 +54,18 @@ public class ClientConnection extends Thread {
                 try{
                     String message = in.readLine();
 
+
+                    if (message == null) continue;
+
                     if (message.startsWith("NSOBA|OK|")) {
                         String imeSobe = message.substring("NSOBA|OK|".length());
                         Platform.runLater(() -> gui.dodajSobu(imeSobe));
+                    }
+
+                    if (message.startsWith("NSOBA|OK|")) {
+                        String imeSobe = message.substring("NSOBA|OK|".length());
+                        Platform.runLater(() -> gui.dodajSobu(imeSobe));
+                        continue;
                     }
 
 

@@ -10,6 +10,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.io.IOException;
+
 public class CreateRoomScene {
     private ClientGUI gui;
     private Stage stage;
@@ -51,6 +53,13 @@ public class CreateRoomScene {
         stage.setTitle("Kreiraj sobe");
         stage.show();
 
+        try{
+            gui.getConnection().sendMessage("NSOBA");
+        } catch (IOException e) {
+            System.out.println("Greska prilikom sljanja poruke o kreiranju sobe serveru!");
+        }
+
+
         btnNazad.setOnAction(e -> gui.ListaSobaScene(stage));
 
 
@@ -74,6 +83,7 @@ public class CreateRoomScene {
 
             try {
                 gui.getConnection().sendMessage(poruka);
+                gui.ListaSobaScene(stage);
             } catch (Exception e) {
                 pokazatiAlert("Greška prilikom slanja poruke serveru.");
             }
