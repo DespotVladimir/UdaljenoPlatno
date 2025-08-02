@@ -56,6 +56,9 @@ public class Message{
         }
     }
 
+
+
+
     public byte[] getBytes() {
         return Message.getBytes(this.shape,this.x1,this.y1,this.x2,this.y2,this.width,this.color);
     }

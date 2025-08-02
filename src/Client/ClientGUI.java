@@ -3,6 +3,7 @@ package Client;
 import Common.Message;
 import Common.Shape;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -114,7 +115,9 @@ public class ClientGUI extends Application {
                 Optional<String> result = dialog.showAndWait();
                 result.ifPresent(password -> {
                     try {
-                        connection.sendMessage("JOIN|" + selektovanaSoba + "|" + password);
+                        connection.sendMessage("ULAZ|" + selektovanaSoba + ";" + password);
+
+
                         canvasPage(stage);
                     } catch (IOException ex) {
                         ex.printStackTrace();
@@ -309,6 +312,8 @@ public class ClientGUI extends Application {
             sobeLista.getItems().setAll(sobe);
         });
     }
+
+
 
 
     public void primiPoruku(String poruka) {

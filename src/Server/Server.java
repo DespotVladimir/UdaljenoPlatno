@@ -169,7 +169,7 @@ public class Server extends Application {
         if(message.startsWith("IME|")){ // IME|ime
             getUserName(user,message);
         } else if (message.startsWith("NSOBA|")) { // NSOBA|naziv;lozinka
-            makeNewRoom(message);
+            makeNewRoom(user,message);
         } else if (message.startsWith("SOBE")) { // SOBE
             getListOfRooms(user);
         } else if (message.startsWith("CRTAJ|")) { // CRTAJ|oblik;x1;y1;x2;y2;R;G;B;O;W
@@ -278,7 +278,7 @@ public class Server extends Application {
         return true;
     }
 
-    private static void makeNewRoom(String s) {
+   /* private static void makeNewRoom(String s) {
         int start = "NSOBA|".length();
         String roomName = s.substring(start).split(";")[0];
         String roomPswd="";
@@ -305,7 +305,44 @@ public class Server extends Application {
         }
         rooms.deleteCharAt(rooms.length()-1);
         sendMessageToUser(user,rooms.toString());
+    }*/
+
+    private static void makeNewRoom(User user, String s) throws IOException {
+        int start = "NSOBA|".length();
+        String roomName = s.substring(start).split(";")[0];
+        String roomPswd = "";
+        if (s.split(";").length > 1)
+            roomPswd = s.split(";")[1];
+
+        String RoomID = UUID.randomUUID().toString().substring(0, 8);
+        Room r = new Room(roomPswd, roomName, RoomID);
+        roomMap.put(RoomID, r);
+
+        // Pošalji potvrdu korisniku koji je kreirao sobu
+        sendMessageToUser(user, "NSOBA|OK|" + roomName);
+
+        // Pošalji ažuriranu listu soba svima ili samo korisniku
+        for (User u : userList) {
+            getListOfRooms(u);
+        }
     }
+
+    private static void getListOfRooms(User user) throws IOException {
+        if (roomMap.isEmpty())
+            return;
+
+        StringBuilder rooms = new StringBuilder("SOBE|");  // prefiks
+
+        for (String key : roomMap.keySet()) {
+            rooms.append(roomMap.get(key).getRoomName()).append(":").append(key).append(";");
+        }
+
+        if (rooms.charAt(rooms.length() - 1) == ';')
+            rooms.deleteCharAt(rooms.length() - 1);
+
+        sendMessageToUser(user, rooms.toString());
+    }
+
 
     private static void checkRoomPassword(User user, String message) throws IOException {
         int start = "ULAZ|".length();

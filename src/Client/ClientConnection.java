@@ -57,10 +57,7 @@ public class ClientConnection extends Thread {
 
                     if (message == null) continue;
 
-                    if (message.startsWith("NSOBA|OK|")) {
-                        String imeSobe = message.substring("NSOBA|OK|".length());
-                        Platform.runLater(() -> gui.dodajSobu(imeSobe));
-                    }
+
 
                     if (message.startsWith("NSOBA|OK|")) {
                         String imeSobe = message.substring("NSOBA|OK|".length());
@@ -89,7 +86,10 @@ public class ClientConnection extends Thread {
         }
     }
 
+
+
     public void setGui(ClientGUI gui) {
         this.gui = gui;
     }
+
 }
