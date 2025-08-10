@@ -1,7 +1,6 @@
 package Client;
 
 import Common.Message;
-import javafx.application.Platform;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -22,7 +21,8 @@ public class ClientConnection extends Thread {
         this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         this.gui = gui;
 
-        gui.setConnection(this);
+        if (gui!=null)
+            gui.setConnection(this);
     }
 
     public void sendMessage(String message) throws IOException {
@@ -32,9 +32,32 @@ public class ClientConnection extends Thread {
     }
 
     public void sendDrawMessage(Message message) throws IOException {
-        String send = message.toString().trim() + "\n";
+        String send = new String(message.getBytes()).trim() + "\n";
         out.write(send);
         out.flush();
+    }
+
+    public boolean getServerApproval(String message) throws IOException {
+        sendMessage(message);
+        String response = in.readLine().trim();
+        System.out.println(message+"///"+response); //TODO obrisi
+        return response.equals("POTVRDI");
+    }
+
+    public String getServerResponse(String message) throws IOException {
+        sendMessage(message);
+        String response = in.readLine().trim();
+        System.out.println(message+"///"+response);   //TODO obrisi
+        return response;
+    }
+
+    public void clearBackLog() {
+        try{
+            while(in.ready())
+                in.readLine();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private boolean closed = false;
@@ -47,37 +70,7 @@ public class ClientConnection extends Thread {
         this.drawing = drawing;
     }
 
-    @Override
-    public void run() {
-        try{
-            while(!closed) {
-                try{
-                    String message = in.readLine();
-
-
-                    if (message == null) continue;
-
-
-
-                    if (message.startsWith("NSOBA|OK|")) {
-                        String imeSobe = message.substring("NSOBA|OK|".length());
-                        Platform.runLater(() -> gui.dodajSobu(imeSobe));
-                        continue;
-                    }
-
-
-
-                    if(!drawing) {
-                        Message msg = new Message(message);
-                        gui.serverDraw(msg);
-                    }
-                }catch (IOException e){
-                    System.out.println(e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    public void closeResources(){
         try {
             in.close();
             out.close();
@@ -86,10 +79,36 @@ public class ClientConnection extends Thread {
         }
     }
 
+    @Override
+    public void run() {
+        while(!closed) {
+            try{
+                if(drawing&&in.ready()){
+                    String message = in.readLine();
+                    if (message == null) continue;
+                    System.out.println(new String(message.getBytes()));
+
+                    if(drawing) {
+                        Message msg = new Message(message);
+                        gui.serverDraw(msg);
+                    }
+                }
+
+            }catch (IOException e){
+                System.out.println(e.getMessage());
+            }
+        }
+
+        closeResources();
+
+    }
+
 
 
     public void setGui(ClientGUI gui) {
         this.gui = gui;
+        gui.setConnection(this);
     }
+
 
 }

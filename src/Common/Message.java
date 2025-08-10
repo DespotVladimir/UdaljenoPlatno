@@ -87,7 +87,7 @@ public class Message{
     }
 
     public String getFormatedMessage(){
-        return String.format("CRTAJ|%s;%.2f;%.2f;%.2f;%.2f;%f;%f;%f;%f;%f\n",
+        return String.format("%s;%.2f;%.2f;%.2f;%.2f;%f;%f;%f;%f;%f\n",
                 shape.toString(),x1,y1,x2,y2,color.getRed(),color.getGreen(),color.getBlue(),color.getOpacity(),width);
 
     }

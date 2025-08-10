@@ -131,11 +131,6 @@ public class Room {
 
     @Override
     public String toString() {
-        return "Room{" +
-                "roomName='" + roomName + '\'' +
-                ", roomPassword='" + roomPassword + '\'' +
-                ", canvas=" + canvas +
-                ", roomID='" + roomID + '\'' +
-                '}';
+        return roomName;
     }
 }

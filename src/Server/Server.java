@@ -29,9 +29,7 @@ public class Server extends Application {
     private static Selector selector;
 
     public static void main(String[] args)  {
-        Thread thread = new Thread(() -> {
-            initServer();
-        });
+        Thread thread = new Thread(() -> initServer());
         thread.start();
         launch(args);
 
@@ -39,6 +37,9 @@ public class Server extends Application {
 
     private static void initServer(){
         roomMap = new HashMap<>();
+        Room r = new Room("","Glavna soba","0");
+        roomMap.put("0",r);
+
         userList = new ArrayList<>();
 
         selector = null;
@@ -159,7 +160,7 @@ public class Server extends Application {
             buffer.get(messageBytes);
 
             String message = new String(messageBytes, StandardCharsets.UTF_8).trim();
-            System.out.println(message); // TODO REMOVE
+            //System.out.println("C//"+message); // TODO REMOVE
             processRequest(user,message);
         }
         buffer.compact();
@@ -169,7 +170,7 @@ public class Server extends Application {
         if(message.startsWith("IME|")){ // IME|ime
             getUserName(user,message);
         } else if (message.startsWith("NSOBA|")) { // NSOBA|naziv;lozinka
-            makeNewRoom(user,message);
+            makeNewRoom(message);
         } else if (message.startsWith("SOBE")) { // SOBE
             getListOfRooms(user);
         } else if (message.startsWith("CRTAJ|")) { // CRTAJ|oblik;x1;y1;x2;y2;R;G;B;O;W
@@ -228,17 +229,19 @@ public class Server extends Application {
                         room.resetCanvas();
                     }
                     case null, default -> {
-                        sendMessageToUser(user,"ERROR");
+                        sendMessageToUser(user,"ERROR1");
                         return;
                     }
                 }
                 message.setCoordinates(x1,y1,x2,y2);
-                sendMessageToUser(user,message.getFormatedMessage());
+
+                for(User u : room.getUsers())
+                    sendMessageToUser(u,message.getFormatedMessage());
 
             }else
-                sendMessageToUser(user,"ERROR");
+                sendMessageToUser(user,"ERROR2");
         }else
-            sendMessageToUser(user,"ERROR");
+            sendMessageToUser(user,"ERROR3");
     }
 
     private static void getCanvasImage(User user, String s) throws IOException, InterruptedException {
@@ -250,7 +253,7 @@ public class Server extends Application {
             sendMessageToUser(user,canvasBASE64);
         }
         else
-            sendMessageToUser(user,"ERROR");
+            sendMessageToUser(user,"ERROR4");
     }
 
 
@@ -263,7 +266,7 @@ public class Server extends Application {
             sendMessageToUser(user,"POTVRDI");
         }
         else
-            sendMessageToUser(user,"ERROR");
+            sendMessageToUser(user,"ERROR5");
     }
 
     private static boolean isNameAvailable(String name){
@@ -278,7 +281,7 @@ public class Server extends Application {
         return true;
     }
 
-   /* private static void makeNewRoom(String s) {
+   private static void makeNewRoom(String s) {
         int start = "NSOBA|".length();
         String roomName = s.substring(start).split(";")[0];
         String roomPswd="";
@@ -291,47 +294,17 @@ public class Server extends Application {
 
     }
 
-
     private static void getListOfRooms(User user) throws IOException {
 
         // Vraca listu oblika ime:kljuc_sobe odvojena ';'
 
-        if(roomMap.isEmpty())
+        if (roomMap.isEmpty())
+        {
+            sendMessageToUser(user,"");
             return;
+        }
 
         StringBuilder rooms = new StringBuilder();
-        for(String key : roomMap.keySet()){
-            rooms.append(roomMap.get(key).getRoomName()).append(":").append(key).append(";");
-        }
-        rooms.deleteCharAt(rooms.length()-1);
-        sendMessageToUser(user,rooms.toString());
-    }*/
-
-    private static void makeNewRoom(User user, String s) throws IOException {
-        int start = "NSOBA|".length();
-        String roomName = s.substring(start).split(";")[0];
-        String roomPswd = "";
-        if (s.split(";").length > 1)
-            roomPswd = s.split(";")[1];
-
-        String RoomID = UUID.randomUUID().toString().substring(0, 8);
-        Room r = new Room(roomPswd, roomName, RoomID);
-        roomMap.put(RoomID, r);
-
-        // Pošalji potvrdu korisniku koji je kreirao sobu
-        sendMessageToUser(user, "NSOBA|OK|" + roomName);
-
-        // Pošalji ažuriranu listu soba svima ili samo korisniku
-        for (User u : userList) {
-            getListOfRooms(u);
-        }
-    }
-
-    private static void getListOfRooms(User user) throws IOException {
-        if (roomMap.isEmpty())
-            return;
-
-        StringBuilder rooms = new StringBuilder("SOBE|");  // prefiks
 
         for (String key : roomMap.keySet()) {
             rooms.append(roomMap.get(key).getRoomName()).append(":").append(key).append(";");
@@ -358,13 +331,14 @@ public class Server extends Application {
             if(roomMap.get(id).getRoomPassword().equals(pswd))
             {
                 user.setRoomID(id);
+                roomMap.get(id).getUsers().add(user);
                 sendMessageToUser(user,"POTVRDI");
             }
             else
-                sendMessageToUser(user,"ERROR");
+                sendMessageToUser(user,"ERROR6");
         }
         else
-            sendMessageToUser(user,"ERROR");
+            sendMessageToUser(user,"ERROR7");
     }
 
     private static void getRoomInfo(User user, String message) throws IOException {
@@ -374,7 +348,7 @@ public class Server extends Application {
         int start = "INFO|".length();
         String id = message.substring(start).trim();
         if(!roomMap.containsKey(id)){
-            sendMessageToUser(user,"ERROR");
+            sendMessageToUser(user,"ERROR8");
             return;
         }
         StringBuilder users = new StringBuilder();
@@ -388,6 +362,8 @@ public class Server extends Application {
 
         // Brise sobu ako nema niko u njoj kada neko izadje
 
+        if(roomID.equals("0")) // Glavna soba koja se ne brise
+            return;
         if(roomMap.containsKey(roomID))
             if(roomMap.get(roomID).getUsers().isEmpty())
                 roomMap.remove(roomID);
@@ -395,7 +371,7 @@ public class Server extends Application {
 
     private static void exitUserFromRoom(User user) {
         if(roomMap.containsKey(user.getRoomID())){
-            roomMap.remove(user.getRoomID());
+            roomMap.get(user.getRoomID()).getUsers().remove(user);
             checkRoomStatus(user.getRoomID());
             user.setRoomID(null);
         }

@@ -1,6 +1,5 @@
 package Client;
 
-import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -53,18 +52,11 @@ public class CreateRoomScene {
         stage.setTitle("Kreiraj sobe");
         stage.show();
 
-        try{
-            gui.getConnection().sendMessage("NSOBA");
-        } catch (IOException e) {
-            System.out.println("Greska prilikom sljanja poruke o kreiranju sobe serveru!");
-        }
-
-
-        btnNazad.setOnAction(e -> gui.ListaSobaScene(stage));
+        btnNazad.setOnAction(_ -> gui.ListaSobaScene(stage));
 
 
 
-        btnKreiraj.setOnAction(actionEvent -> {
+        btnKreiraj.setOnAction(_ -> {
             String naziv=tfNazivSobe.getText().trim();
             String lozinka=pfPassword.getText().trim();
 
@@ -78,7 +70,6 @@ public class CreateRoomScene {
                 poruka = "NSOBA|" + naziv + ";";
             }else {
                 poruka = "NSOBA|" + naziv + ";" + lozinka;
-
             }
 
             try {

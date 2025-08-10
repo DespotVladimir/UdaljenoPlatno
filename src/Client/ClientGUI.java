@@ -1,6 +1,7 @@
 package Client;
 
 import Common.Message;
+import Common.Room;
 import Common.Shape;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -10,15 +11,22 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
-import javafx.scene.input.MouseButton;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.InetAddress;
+import java.io.InputStream;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 public class ClientGUI extends Application {
@@ -30,7 +38,7 @@ public class ClientGUI extends Application {
     ClientConnection connection;
     Thread connectionThread;
 
-    private ListView <String> sobeLista;
+    private ListView <Room> sobeLista;
 
 
     public ClientConnection getConnection() {
@@ -56,24 +64,9 @@ public class ClientGUI extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        initConnection();
-        canvasPage(stage);
+        connectionThread = new Thread(connection);
+        connectionThread.start();
         ListaSobaScene(stage);
-    }
-
-    public synchronized void initConnection(){
-        try {
-            connection = new ClientConnection(InetAddress.getByName("localhost"),12345,this);
-            connectionThread = new Thread(connection);
-            connectionThread.start();
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to connect to the server. ");
-        }
-    }
-
-
-    public void dodajSobu(String imeSobe) {
-        sobeLista.getItems().add(imeSobe);
     }
 
 
@@ -83,42 +76,39 @@ public class ClientGUI extends Application {
 
         Button btnCreateRoom = new Button("Kreiraj sobu");
 
-        btnCreateRoom.setOnAction(e -> {
+        btnCreateRoom.setOnAction(_ -> {
             if (createRoomScene == null) {
                 createRoomScene = new CreateRoomScene(this, stage);
             }
             createRoomScene.prikazi();
         });
 
-        sobeLista=new ListView<>();
+        sobeLista = new ListView<>();
         sobeLista.setPrefHeight(150);
         sobeLista.setPrefWidth(200);
-        sobeLista.getItems().addAll("Soba1","Soba2","Soba3");
-
-
-
 
         Button btnUlazSoba=new Button("Uđi u sobu");
 
-
-
-
-
-        btnUlazSoba.setOnAction(e -> {
-            String selektovanaSoba = sobeLista.getSelectionModel().getSelectedItem();
+        btnUlazSoba.setOnAction(_ -> {
+            Room selektovanaSoba = sobeLista.getSelectionModel().getSelectedItem();
             if (selektovanaSoba != null) {
+
                 TextInputDialog dialog = new TextInputDialog();
                 dialog.setTitle("Ulazak u sobu");
-                dialog.setHeaderText("Soba \"" + selektovanaSoba + "\" može biti zaštićena.");
+                dialog.setHeaderText("Soba \"" + selektovanaSoba.getRoomName() + "\" može biti zaštićena.");
                 dialog.setContentText("Unesite šifru (ostavite prazno ako nema):");
 
                 Optional<String> result = dialog.showAndWait();
                 result.ifPresent(password -> {
                     try {
-                        connection.sendMessage("ULAZ|" + selektovanaSoba + ";" + password);
+                        if(connection.getServerApproval("ULAZ|" + selektovanaSoba.getRoomID() + ";" + password))
+                        {
+                            roomID = selektovanaSoba.getRoomID();
+                            canvasPage(stage);
+                        }
+                        else
+                            dialog.close();
 
-
-                        canvasPage(stage);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
@@ -133,32 +123,49 @@ public class ClientGUI extends Application {
         stage.setScene(scene);
         stage.setTitle("Lista soba");
         stage.show();
+
+
+        new Thread(()-> Platform.runLater(()->{
+
+            try {
+                osveziListuSoba();
+            } catch (IOException e){
+                stage.close();
+            }
+        })).start();
+
     }
 
-    private HBox createToolbar(Stage stage, ComboBox<Shape> shapeBox, ColorPicker colorPicker) {
-        HBox toolbar = new HBox(15);
-        toolbar.setPadding(new Insets(10));
-        toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setStyle("-fx-background-color: #dddddd;");
 
-        Button btnNazad = new Button("Nazad");
-        btnNazad.setOnAction(e -> ListaSobaScene(stage));
 
-        Label lblOblik = new Label("Oblik:");
-        shapeBox.getItems().addAll(Shape.LINE, Shape.RECT, Shape.OVAL, Shape.REST);
-        shapeBox.setValue(Shape.LINE);
 
-        Label lblBoja = new Label("Boja:");
 
-        toolbar.getChildren().addAll(btnNazad, lblOblik, shapeBox, lblBoja, colorPicker);
 
-        return toolbar;
+    public void osveziListuSoba() throws IOException {
+        List<Room> sobe = new ArrayList<>();
+        try {
+            String odgovor = connection.getServerResponse("SOBE");
+            String[] s = odgovor.split(";");
+            for(String str: s){
+                String[] parts = str.split(":");
+                Room r = new Room(parts[0],parts[1]);
+                sobe.add(r);
+            }
+        } catch (IOException e) {
+            throw new IOException(e);
+        }
+
+        sobeLista.getItems().clear();
+        if(!sobe.isEmpty())
+            sobeLista.getItems().setAll(sobe);
+
     }
-
 
 
     private Canvas canvas;
+    private String roomID;
     public void canvasPage(Stage stage){
+
         VBox root = new VBox();
         VBox canvasBG = new VBox();
         canvas = new Canvas(800,600);
@@ -272,6 +279,45 @@ public class ClientGUI extends Application {
         stage.show();
 
 
+        new Thread(()-> Platform.runLater(()->{
+            //TODO poruka->platno
+            try{
+                String platno = connection.getServerResponse("PLATNO|"+roomID);
+                drawBase64ToCanvas(canvas,platno);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+        })).start();
+    }
+
+    private HBox createToolbar(Stage stage, ComboBox<Shape> shapeBox, ColorPicker colorPicker) {
+        HBox toolbar = new HBox(15);
+        toolbar.setPadding(new Insets(10));
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setStyle("-fx-background-color: #dddddd;");
+
+        Button btnNazad = new Button("Nazad");
+        btnNazad.setOnAction(_ -> {
+            connection.setDrawing(false);
+            connection.clearBackLog();
+            try {
+                connection.sendMessage("IZLAZ");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            ListaSobaScene(stage);
+        });
+
+        Label lblOblik = new Label("Oblik:");
+        shapeBox.getItems().addAll(Shape.LINE, Shape.RECT, Shape.OVAL, Shape.REST);
+        shapeBox.setValue(Shape.LINE);
+
+        Label lblBoja = new Label("Boja:");
+
+        toolbar.getChildren().addAll(btnNazad, lblOblik, shapeBox, lblBoja, colorPicker);
+
+        return toolbar;
     }
 
     public void serverDraw(Message message) {
@@ -307,22 +353,49 @@ public class ClientGUI extends Application {
         }
     }
 
-    public void osveziListuSoba(String[] sobe) {
-        javafx.application.Platform.runLater(() -> {
-            sobeLista.getItems().setAll(sobe);
-        });
-    }
+    public void drawBase64ToCanvas(Canvas canvas, String base64) {
+        try {
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
+
+            InputStream is = new ByteArrayInputStream(imageBytes);
+            BufferedImage bufferedImage = ImageIO.read(is);
+
+            if (bufferedImage == null) {
+                System.err.println("Greška: nije moguće učitati sliku iz Base64.");
+                return;
+            }
+
+            // Pretvori BufferedImage u JavaFX Image
+            WritableImage fxImage = new WritableImage(bufferedImage.getWidth(), bufferedImage.getHeight());
+            PixelWriter pw = fxImage.getPixelWriter();
+
+            for (int y = 0; y < bufferedImage.getHeight(); y++) {
+                for (int x = 0; x < bufferedImage.getWidth(); x++) {
+                    int argb = bufferedImage.getRGB(x, y);
+                    int alpha = (argb >> 24) & 0xFF;
+                    int red = (argb >> 16) & 0xFF;
+                    int green = (argb >> 8) & 0xFF;
+                    int blue = argb & 0xFF;
+
+                    Color fxColor = Color.rgb(
+                            red, green, blue, alpha / 255.0
+                    );
+
+                    pw.setColor(x, y, fxColor);
+                }
+            }
 
 
+            GraphicsContext gc = canvas.getGraphicsContext2D();
+            gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+            gc.drawImage(fxImage, 0, 0);
+            connection.setDrawing(true);
 
-
-    public void primiPoruku(String poruka) {
-        if (poruka.startsWith("SOBE|")) {
-            String listaSoba = poruka.substring(5);
-            String[] sobe = listaSoba.split(";");
-            osveziListuSoba(sobe);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
+
 
 
     @Override
