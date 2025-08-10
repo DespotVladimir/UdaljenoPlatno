@@ -11,6 +11,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
@@ -134,6 +135,7 @@ public class ClientGUI extends Application {
             }
         })).start();
 
+        stage.setOnCloseRequest(_-> System.exit(0));
     }
 
 
@@ -165,6 +167,7 @@ public class ClientGUI extends Application {
     private Canvas canvas;
     private String roomID;
     public void canvasPage(Stage stage){
+        stage.setOnCloseRequest(_-> System.exit(0));
 
         VBox root = new VBox();
         VBox canvasBG = new VBox();
@@ -174,11 +177,12 @@ public class ClientGUI extends Application {
 
         final double[] pressedX = new double[1];
         final double[] pressedY = new double[1];
-        final double[] width = {gc.getLineWidth()};
+
 
         ComboBox<Shape> shapeBox=new ComboBox<>();
         ColorPicker cololrPicker=new ColorPicker(Color.BLACK);
-        HBox toolbar=createToolbar(stage,shapeBox,cololrPicker);
+        Slider slider = new Slider(1,30,1);
+        HBox toolbar=createToolbar(stage,shapeBox,cololrPicker,slider);
 
         final Shape[] shape={shapeBox.getValue()!=null ? shapeBox.getValue():Shape.LINE};
         final  Color[] color = {cololrPicker.getValue()};
@@ -186,32 +190,6 @@ public class ClientGUI extends Application {
         shapeBox.valueProperty().addListener((obs,oldVal,newVal)->shape[0]=newVal);
         cololrPicker.valueProperty().addListener((obs,oldVal,newVal)->color[0]=newVal);
 
-
-        /*canvas.setOnMousePressed(event->{
-            pressedX[0] = event.getX();
-            pressedY[0] = event.getY();
-            MouseButton button = event.getButton();
-            switch (button){
-                case MouseButton.PRIMARY-> {
-                    color[0] = Color.BLACK;
-                    shape[0] = Shape.LINE;
-                }
-                case MouseButton.SECONDARY -> {
-                    color[0] = Color.RED;
-                    shape[0] = Shape.OVAL;
-                }
-                case MouseButton.MIDDLE -> {
-                    shape[0] = Shape.REST;
-                    try{
-                        sendMessageToServer(shape[0],0,0,Math.abs(pressedX[0]-0),Math.abs(pressedY[0]-0),width[0],color[0]);
-                    } catch (SocketException e) {
-                        stage.close();
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-            gc.setStroke(color[0]);
-        });*/
 
         canvas.setOnMousePressed(event -> {
             pressedX[0] = event.getX();
@@ -227,7 +205,7 @@ public class ClientGUI extends Application {
             if(shape[0]==Shape.LINE){
                 gc.strokeLine(pressedX[0], pressedY[0], currentX, currentY);
                 try{
-                    sendMessageToServer(shape[0],pressedX[0],pressedY[0],currentX,currentY,width[0],color[0]);
+                    sendMessageToServer(shape[0],pressedX[0],pressedY[0],currentX,currentY,slider.getValue(),color[0]);
                 } catch (SocketException e) {
                     stage.close();
                     throw new RuntimeException(e);
@@ -246,7 +224,7 @@ public class ClientGUI extends Application {
             if(shape[0]==Shape.RECT){
                 gc.strokeRect(topLeftX, topLeftY,Math.abs(pressedX[0]-currentX), Math.abs(pressedY[0]-currentY) );
                 try{
-                    sendMessageToServer(shape[0],topLeftX,topLeftY,Math.abs(pressedX[0]-currentX),Math.abs(pressedY[0]-currentY),width[0],color[0]);
+                    sendMessageToServer(shape[0],currentX,currentY,pressedX[0],pressedY[0],slider.getValue(),color[0]);
                 } catch (SocketException e) {
                     stage.close();
                     throw new RuntimeException(e);
@@ -256,7 +234,7 @@ public class ClientGUI extends Application {
             {
                 gc.strokeOval(topLeftX, topLeftY,Math.abs(pressedX[0]-currentX), Math.abs(pressedY[0]-currentY));
                 try{
-                    sendMessageToServer(shape[0],topLeftX,topLeftY,Math.abs(pressedX[0]-currentX),Math.abs(pressedY[0]-currentY),width[0],color[0]);
+                    sendMessageToServer(shape[0],currentX,currentY,pressedX[0],pressedY[0],slider.getValue(),color[0]);
                 } catch (SocketException e) {
                     stage.close();
                     throw new RuntimeException(e);
@@ -291,7 +269,7 @@ public class ClientGUI extends Application {
         })).start();
     }
 
-    private HBox createToolbar(Stage stage, ComboBox<Shape> shapeBox, ColorPicker colorPicker) {
+    private HBox createToolbar(Stage stage, ComboBox<Shape> shapeBox, ColorPicker colorPicker, Slider slider) {
         HBox toolbar = new HBox(15);
         toolbar.setPadding(new Insets(10));
         toolbar.setAlignment(Pos.CENTER_LEFT);
@@ -309,13 +287,28 @@ public class ClientGUI extends Application {
             ListaSobaScene(stage);
         });
 
+
+
+        Button btnReset = new Button("Reset");
+        btnReset.setOnAction(_ -> {
+            canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+            try {
+                sendMessageToServer(Shape.REST,0,0,0,0,0,colorPicker.getValue());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+
+        Label lblSlider = new Label("Širina: ");
+
         Label lblOblik = new Label("Oblik:");
-        shapeBox.getItems().addAll(Shape.LINE, Shape.RECT, Shape.OVAL, Shape.REST);
+        shapeBox.getItems().addAll(Shape.LINE, Shape.RECT, Shape.OVAL);
         shapeBox.setValue(Shape.LINE);
 
         Label lblBoja = new Label("Boja:");
 
-        toolbar.getChildren().addAll(btnNazad, lblOblik, shapeBox, lblBoja, colorPicker);
+        toolbar.getChildren().addAll(btnNazad, lblOblik, shapeBox, lblBoja, colorPicker,lblSlider,slider,btnReset);
 
         return toolbar;
     }
@@ -325,7 +318,7 @@ public class ClientGUI extends Application {
         Color color = message.getColor();
         Shape s = message.getShape();
         canvas.getGraphicsContext2D().setStroke(color);
-
+        canvas.getGraphicsContext2D().setLineWidth(message.getWidth());
         switch (s){
             case LINE:
                 canvas.getGraphicsContext2D().strokeLine(m[0],m[1],m[2],m[3]);
@@ -355,52 +348,21 @@ public class ClientGUI extends Application {
 
     public void drawBase64ToCanvas(Canvas canvas, String base64) {
         try {
+
             byte[] imageBytes = Base64.getDecoder().decode(base64);
+            Image image = new Image(new ByteArrayInputStream(imageBytes));
 
-            InputStream is = new ByteArrayInputStream(imageBytes);
-            BufferedImage bufferedImage = ImageIO.read(is);
-
-            if (bufferedImage == null) {
-                System.err.println("Greška: nije moguće učitati sliku iz Base64.");
-                return;
-            }
-
-            // Pretvori BufferedImage u JavaFX Image
-            WritableImage fxImage = new WritableImage(bufferedImage.getWidth(), bufferedImage.getHeight());
-            PixelWriter pw = fxImage.getPixelWriter();
-
-            for (int y = 0; y < bufferedImage.getHeight(); y++) {
-                for (int x = 0; x < bufferedImage.getWidth(); x++) {
-                    int argb = bufferedImage.getRGB(x, y);
-                    int alpha = (argb >> 24) & 0xFF;
-                    int red = (argb >> 16) & 0xFF;
-                    int green = (argb >> 8) & 0xFF;
-                    int blue = argb & 0xFF;
-
-                    Color fxColor = Color.rgb(
-                            red, green, blue, alpha / 255.0
-                    );
-
-                    pw.setColor(x, y, fxColor);
-                }
-            }
-
-
+            // Crtanje na Canvas
             GraphicsContext gc = canvas.getGraphicsContext2D();
             gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-            gc.drawImage(fxImage, 0, 0);
+            gc.drawImage(image, 0, 0);
             connection.setDrawing(true);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
 
 
-    @Override
-    public void stop() throws Exception {
-        connection.setClosed(true);
-        super.stop();
-    }
 }

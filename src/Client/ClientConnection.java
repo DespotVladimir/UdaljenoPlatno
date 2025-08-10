@@ -40,21 +40,21 @@ public class ClientConnection extends Thread {
     public boolean getServerApproval(String message) throws IOException {
         sendMessage(message);
         String response = in.readLine().trim();
-        System.out.println(message+"///"+response); //TODO obrisi
+        //System.out.println(message+"///"+response); //TODO obrisi
         return response.equals("POTVRDI");
     }
 
     public String getServerResponse(String message) throws IOException {
         sendMessage(message);
         String response = in.readLine().trim();
-        System.out.println(message+"///"+response);   //TODO obrisi
+        //System.out.println(message+"///"+response);   //TODO obrisi
         return response;
     }
 
     public void clearBackLog() {
         try{
             while(in.ready())
-                in.readLine();
+                in.read();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -81,23 +81,30 @@ public class ClientConnection extends Thread {
 
     @Override
     public void run() {
-        while(!closed) {
-            try{
-                if(drawing&&in.ready()){
-                    String message = in.readLine();
-                    if (message == null) continue;
-                    System.out.println(new String(message.getBytes()));
 
-                    if(drawing) {
-                        Message msg = new Message(message);
-                        gui.serverDraw(msg);
+        try(BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+            while(!closed) {
+                try{
+                    Thread.yield();     // budi thread, u suprotnom spava
+                    if(drawing&&in.ready()){
+                        String message;
+                        if((message = in.readLine()) == null)
+                            break;
+
+                        if(drawing) {
+                            Message msg = new Message(message);
+                            gui.serverDraw(msg);
+                        }
                     }
-                }
 
-            }catch (IOException e){
-                System.out.println(e.getMessage());
+                }catch (IOException e){
+                    System.out.println(e.getMessage());
+                }
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+
 
         closeResources();
 

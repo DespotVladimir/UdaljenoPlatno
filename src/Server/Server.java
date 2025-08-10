@@ -3,8 +3,25 @@ package Server;
 import Common.Message;
 import Common.Room;
 import Common.User;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -14,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.List;
 
 public class Server extends Application {
 
@@ -37,8 +55,8 @@ public class Server extends Application {
 
     private static void initServer(){
         roomMap = new HashMap<>();
-        Room r = new Room("","Glavna soba","0");
-        roomMap.put("0",r);
+        Room r = new Room("","Glavna soba","00000000");
+        roomMap.put("00000000",r);
 
         userList = new ArrayList<>();
 
@@ -115,9 +133,9 @@ public class Server extends Application {
         userList.remove(u);
 
         key.attach(null);
+        System.err.println("Client disconnected: "+ key.channel().toString());
         key.channel().close();
         key.cancel();
-        System.err.println("Client disconnected: "+ key);
     }
 
     private static void readFromClient(SelectionKey key) throws IOException, InterruptedException {
@@ -160,7 +178,7 @@ public class Server extends Application {
             buffer.get(messageBytes);
 
             String message = new String(messageBytes, StandardCharsets.UTF_8).trim();
-            //System.out.println("C//"+message); // TODO REMOVE
+            //System.out.println(message); // TODO REMOVE
             processRequest(user,message);
         }
         buffer.compact();
@@ -225,9 +243,7 @@ public class Server extends Application {
                         y2=Math.abs(message.getCoordinates()[1]-message.getCoordinates()[3]);
                         room.drawRectOnCanvas(x1,y1,x2,y2);
                     }
-                    case REST -> {
-                        room.resetCanvas();
-                    }
+                    case REST -> room.resetCanvas();
                     case null, default -> {
                         sendMessageToUser(user,"ERROR1");
                         return;
@@ -235,8 +251,9 @@ public class Server extends Application {
                 }
                 message.setCoordinates(x1,y1,x2,y2);
 
-                for(User u : room.getUsers())
+                for(User u : room.getUsers()){
                     sendMessageToUser(u,message.getFormatedMessage());
+                }
 
             }else
                 sendMessageToUser(user,"ERROR2");
@@ -328,7 +345,7 @@ public class Server extends Application {
 
         if(roomMap.containsKey(id))
         {
-            if(roomMap.get(id).getRoomPassword().equals(pswd))
+            if(roomMap.get(id).getRoomPassword().equals(pswd) || roomMap.get(id).getRoomPassword().isEmpty())
             {
                 user.setRoomID(id);
                 roomMap.get(id).getUsers().add(user);
@@ -344,6 +361,7 @@ public class Server extends Application {
     private static void getRoomInfo(User user, String message) throws IOException {
 
         // Vraca listu korisnika sobe odvojene ';'
+        //TODO poslati i info da li je otvorena ili ne
 
         int start = "INFO|".length();
         String id = message.substring(start).trim();
@@ -362,7 +380,7 @@ public class Server extends Application {
 
         // Brise sobu ako nema niko u njoj kada neko izadje
 
-        if(roomID.equals("0")) // Glavna soba koja se ne brise
+        if(roomID.equals("00000000")) // Glavna soba koja se ne brise
             return;
         if(roomMap.containsKey(roomID))
             if(roomMap.get(roomID).getUsers().isEmpty())
@@ -378,8 +396,133 @@ public class Server extends Application {
     }
 
 
+    /***************** GUI ************************/
+
     @Override
     public void start(Stage stage) throws Exception {
+        //stage.setOnCloseRequest(_-> System.exit(0));
 
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(20));
+
+
+        HBox tables = new HBox(50);
+
+        VBox leftSide = new VBox(1);
+
+        Label lblUser = new Label("RoomID:   Username");
+        lblUser.setFont(new Font("Consolas",13));
+        TextArea tblUsers = new TextArea();
+        tblUsers.setPrefHeight(400);
+        tblUsers.setPrefWidth(200);
+        tblUsers.setEditable(false);
+        tblUsers.setFont(new Font("Consolas",12));
+
+        tblUsers.setBackground(Background.EMPTY);
+
+
+        leftSide.getChildren().addAll(lblUser,tblUsers);
+
+
+        VBox r = new VBox(1);
+        Label lblR = new Label("Sobe: ");
+        lblR.setFont(new Font("Consolas",13));
+        FlowPane rightSide = new FlowPane();
+        rightSide.setMaxHeight(400);
+        rightSide.setPrefWidth(200);
+
+        r.getChildren().addAll(lblR,rightSide);
+
+        Button off = new Button("Ugasi Server");
+        off.setOnAction(_->{
+            System.exit(0);
+        });
+
+        tables.getChildren().addAll(leftSide,r);
+
+        root.getChildren().addAll(tables,off);
+
+        Scene main = new Scene(root);
+        stage.setScene(main);
+        stage.setTitle("Admin Panel");
+        stage.show();
+
+
+        Timeline timeline = new Timeline(new KeyFrame(Duration.millis(300), _ -> {
+            refreshUserList(tblUsers,"0");
+            refreshServerList(rightSide);
+        }));
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.play();
+    }
+
+    private void refreshUserList(TextArea  userTable,String id){
+        userTable.setEditable(true);
+        IndexRange i = userTable.getSelection();
+        userTable.setText("");
+        List<User> userList1 = new ArrayList<>(userList);
+        for(User u : userList1){
+            if(u.getRoomID()==null)
+                userTable.appendText(("--------")+": "+ (u.getName()==null?"Unknown":u.getName()) +"\n");
+            else if(u.getRoomID().equals(id) || id.equalsIgnoreCase("0"))
+                userTable.appendText(u.getRoomID() +": "+ u.getName() +"\n");
+        }
+
+        userTable.selectRange(i.getStart(),i.getEnd());
+        userTable.setEditable(false);
+
+    }
+
+    private void refreshServerList(FlowPane serverTable){
+        serverTable.getChildren().clear();
+        for(String key:roomMap.keySet())
+        {
+            Button btn = new Button(roomMap.get(key).getRoomID()+": "+roomMap.get(key).getRoomName());
+            btn.setFont(new Font("Consolas",12));
+            btn.setPrefWidth(200);
+            btn.setMaxWidth(200);
+            btn.setOnAction(_->{
+                HBox hAll = new HBox(10);
+                hAll.setPadding(new Insets(20));
+
+                VBox l = new VBox(10);
+                Label lblName = new Label("Ime: " + roomMap.get(key).getRoomName());
+                lblName.setFont(new Font("Consolas",13));
+                Label lblID = new Label("RoomID: " + roomMap.get(key).getRoomID());
+                lblID.setFont(new Font("Consolas",13));
+                Label lblCount = new Label("Broj Korisnika: " + roomMap.get(key).getUsers().size());
+                lblCount.setFont(new Font("Consolas",13));
+                Label users = new Label("Korisnici: ");
+                users.setFont(new Font("Consolas",13));
+                TextArea txtUsers = new TextArea();
+                txtUsers.setFont(new Font("Consolas",12));
+                txtUsers.setPrefHeight(400);
+                txtUsers.setPrefWidth(200);
+                txtUsers.setEditable(false);
+
+                l.getChildren().addAll(lblName,lblID,lblCount,users,txtUsers);
+
+                Canvas c = roomMap.get(key).getCanvas();
+
+                hAll.getChildren().addAll(l,c);
+
+
+                Stage room = new Stage();
+
+                Scene  scene = new Scene(hAll);
+                room.setScene(scene);
+                room.setTitle("RoomView");
+                room.show();
+
+                Timeline timeline = new Timeline(new KeyFrame(Duration.millis(300), e -> {
+                    lblCount.setText("Broj Korisnika: " + roomMap.get(key).getUsers().size());
+                    refreshUserList(txtUsers,key);
+                }));
+                timeline.setCycleCount(Timeline.INDEFINITE);
+                timeline.play();
+            });
+
+            serverTable.getChildren().add(btn);
+        }
     }
 }

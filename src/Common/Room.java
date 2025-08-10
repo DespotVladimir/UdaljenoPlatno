@@ -1,8 +1,8 @@
 package Common;
 
 import javafx.application.Platform;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -10,7 +10,6 @@ import javafx.scene.paint.Paint;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -28,6 +27,8 @@ public class Room {
         this.roomName = roomName;
         this.roomID = roomID;
         canvas = new Canvas(800,600);
+        canvas.getGraphicsContext2D().setFill(Paint.valueOf("white"));
+        canvas.getGraphicsContext2D().fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
         users = new ArrayList<>();
     }
 
@@ -39,74 +40,73 @@ public class Room {
     }
 
     public void drawLineOnCanvas(double x1, double y1, double x2, double y2) {
-        Platform.runLater(()->{
-            canvas.getGraphicsContext2D().strokeLine(x1, y1, x2, y2);
-        });
+        Platform.runLater(()-> canvas.getGraphicsContext2D().strokeLine(x1, y1, x2, y2));
     }
 
     public void drawRectOnCanvas(double x, double y, double w, double h) {
-        Platform.runLater(()->{
-            canvas.getGraphicsContext2D().strokeRect(x, y, w, h);
-        });
+        Platform.runLater(() -> canvas.getGraphicsContext2D().strokeRect(x, y, w, h));
     }
 
     public void drawOvalOnCanvas(double x, double y, double w, double h) {
-        Platform.runLater(()->{
-            canvas.getGraphicsContext2D().strokeOval(x, y, w, h);
-        });
+        Platform.runLater(()-> canvas.getGraphicsContext2D().strokeOval(x, y, w, h));
     }
 
     public void resetCanvas(){
-        Platform.runLater(()->{
-            canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        });
+        Platform.runLater(()-> canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight()));
 
     }
 
     public void changeStrokeColor(Paint color){
-        Platform.runLater(()->{
-            canvas.getGraphicsContext2D().setFill(color);
-        });
+        Platform.runLater(()-> canvas.getGraphicsContext2D().setStroke(color));
 
     }
 
     public void changeLineWidth(double width){
-        Platform.runLater(()->{
-            canvas.getGraphicsContext2D().setLineWidth(width);
-        });
+        Platform.runLater(()-> canvas.getGraphicsContext2D().setLineWidth(width));
 
     }
 
-    public String exportCanvasToBase64() throws IOException, InterruptedException {
+    public String exportCanvasToBase64() throws InterruptedException {
         int width = (int) canvas.getWidth();
         int height = (int) canvas.getHeight();
 
         WritableImage writableImage = new WritableImage(width, height);
         CountDownLatch latch = new CountDownLatch(1);
-        Platform.runLater(()->{
-            canvas.snapshot(null, writableImage);
+
+        Platform.runLater(() -> {
+            SnapshotParameters params = new SnapshotParameters();
+            params.setFill(Color.TRANSPARENT); // ili Color.WHITE za pozadinu
+            canvas.snapshot(params, writableImage);
             latch.countDown();
         });
+
         latch.await();
 
-        BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        PixelReader pixelReader = writableImage.getPixelReader();
+        try {
+            BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            javafx.scene.image.PixelReader pixelReader = writableImage.getPixelReader();
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Color fxColor = pixelReader.getColor(x, y);
-                int argb =
-                        ((int)(fxColor.getOpacity() * 255) << 24) |
-                                ((int)(fxColor.getRed() * 255) << 16) |
-                                ((int)(fxColor.getGreen() * 255) << 8) |
-                                ((int)(fxColor.getBlue() * 255));
-                bufferedImage.setRGB(x, y, argb);
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    javafx.scene.paint.Color fxColor = pixelReader.getColor(x, y);
+                    int a = (int) Math.round(fxColor.getOpacity() * 255);
+                    int r = (int) Math.round(fxColor.getRed() * 255);
+                    int g = (int) Math.round(fxColor.getGreen() * 255);
+                    int b = (int) Math.round(fxColor.getBlue() * 255);
+                    int argb = (a << 24) | (r << 16) | (g << 8) | b;
+                    bufferedImage.setRGB(x, y, argb);
+                }
             }
-        }
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(bufferedImage, "png", baos);
-        return Base64.getEncoder().encodeToString(baos.toByteArray());
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "png", baos);
+            baos.flush();
+
+            return Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return null;
+        }
     }
 
     public String getRoomPassword() {
