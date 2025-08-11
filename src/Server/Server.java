@@ -13,12 +13,10 @@ import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -360,8 +358,7 @@ public class Server extends Application {
 
     private static void getRoomInfo(User user, String message) throws IOException {
 
-        // Vraca listu korisnika sobe odvojene ';'
-        //TODO poslati i info da li je otvorena ili ne
+        // Vraca listu korisnika sobe odvojene ';' ime;O-otvorena ili Z-zakljucana;
 
         int start = "INFO|".length();
         String id = message.substring(start).trim();
@@ -369,7 +366,8 @@ public class Server extends Application {
             sendMessageToUser(user,"ERROR8");
             return;
         }
-        StringBuilder users = new StringBuilder();
+        String startR = roomMap.get(id).getRoomName()+";"+(roomMap.get(id).getRoomPassword().isEmpty()?"O;":"Z;");
+        StringBuilder users = new StringBuilder(startR);
         for(User u : roomMap.get(id).getUsers()){
             users.append(u.getName()).append(";");
         }
@@ -398,9 +396,12 @@ public class Server extends Application {
 
     /***************** GUI ************************/
 
+    private final boolean GUI = false;
     @Override
     public void start(Stage stage) throws Exception {
-        //stage.setOnCloseRequest(_-> System.exit(0));
+        if(!GUI)
+            return;
+        stage.setOnCloseRequest(_-> System.exit(0));
 
         VBox root = new VBox(10);
         root.setPadding(new Insets(20));
@@ -434,6 +435,7 @@ public class Server extends Application {
         r.getChildren().addAll(lblR,rightSide);
 
         Button off = new Button("Ugasi Server");
+        off.setFont(new Font("Consolas",13));
         off.setOnAction(_->{
             System.exit(0);
         });
@@ -488,6 +490,8 @@ public class Server extends Application {
                 VBox l = new VBox(10);
                 Label lblName = new Label("Ime: " + roomMap.get(key).getRoomName());
                 lblName.setFont(new Font("Consolas",13));
+                Label lblPSW = new Label("Šifra: " + (roomMap.get(key).getRoomPassword().isEmpty()?"-":roomMap.get(key).getRoomPassword()));
+                lblPSW.setFont(new Font("Consolas",13));
                 Label lblID = new Label("RoomID: " + roomMap.get(key).getRoomID());
                 lblID.setFont(new Font("Consolas",13));
                 Label lblCount = new Label("Broj Korisnika: " + roomMap.get(key).getUsers().size());
@@ -500,12 +504,11 @@ public class Server extends Application {
                 txtUsers.setPrefWidth(200);
                 txtUsers.setEditable(false);
 
-                l.getChildren().addAll(lblName,lblID,lblCount,users,txtUsers);
+                l.getChildren().addAll(lblName,lblPSW,lblID,lblCount,users,txtUsers);
 
                 Canvas c = roomMap.get(key).getCanvas();
 
                 hAll.getChildren().addAll(l,c);
-
 
                 Stage room = new Stage();
 
@@ -514,7 +517,8 @@ public class Server extends Application {
                 room.setTitle("RoomView");
                 room.show();
 
-                Timeline timeline = new Timeline(new KeyFrame(Duration.millis(300), e -> {
+
+                Timeline timeline = new Timeline(new KeyFrame(Duration.millis(300), _ -> {
                     lblCount.setText("Broj Korisnika: " + roomMap.get(key).getUsers().size());
                     refreshUserList(txtUsers,key);
                 }));

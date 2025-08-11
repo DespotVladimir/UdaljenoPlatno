@@ -24,7 +24,7 @@ public enum Shape {
                 return REST;
             }
             default -> {
-                return null;
+                return LINE;
             }
         }
     }

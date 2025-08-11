@@ -79,6 +79,8 @@ public class ClientConnection extends Thread {
         }
     }
 
+
+    private boolean waiting = false;
     @Override
     public void run() {
 
@@ -86,15 +88,21 @@ public class ClientConnection extends Thread {
             while(!closed) {
                 try{
                     Thread.yield();     // budi thread, u suprotnom spava
-                    if(drawing&&in.ready()){
+                    if(drawing&&in.ready()&&!isWaiting()){
                         String message;
+                        waiting=true;
                         if((message = in.readLine()) == null)
                             break;
 
                         if(drawing) {
-                            Message msg = new Message(message);
-                            gui.serverDraw(msg);
+                            try{
+                                Message msg = new Message(message);
+                                gui.serverDraw(msg);
+                            }catch(Exception _){
+
+                            }
                         }
+                        waiting=false;
                     }
 
                 }catch (IOException e){
@@ -118,4 +126,11 @@ public class ClientConnection extends Thread {
     }
 
 
+    public boolean isDrawing() {
+        return drawing;
+    }
+
+    public boolean isWaiting() {
+        return waiting;
+    }
 }

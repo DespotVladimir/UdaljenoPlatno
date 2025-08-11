@@ -49,10 +49,7 @@ public class Message{
             );
             this.width = Double.parseDouble(parts[9]);
         }
-        catch (Exception e){
-            e.printStackTrace();
-            System.err.println(Arrays.toString(parts));
-            throw new IOException(e);
+        catch (Exception _){
         }
     }
 
@@ -101,6 +98,7 @@ public class Message{
                 ", v4=" + y2 +
                 ", shape=" + shape +
                 ", color=" + color +
+                ", width=" + width+
                 '}';
     }
 }

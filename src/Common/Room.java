@@ -6,6 +6,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.StrokeLineCap;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -40,7 +41,11 @@ public class Room {
     }
 
     public void drawLineOnCanvas(double x1, double y1, double x2, double y2) {
-        Platform.runLater(()-> canvas.getGraphicsContext2D().strokeLine(x1, y1, x2, y2));
+        Platform.runLater(()->{
+            canvas.getGraphicsContext2D().setLineCap(StrokeLineCap.ROUND);
+            canvas.getGraphicsContext2D().strokeLine(x1, y1, x2, y2);
+            canvas.getGraphicsContext2D().setLineCap(StrokeLineCap.SQUARE);
+        });
     }
 
     public void drawRectOnCanvas(double x, double y, double w, double h) {
