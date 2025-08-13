@@ -1,6 +1,7 @@
 package Client;
 
 import Common.Message;
+import javafx.application.Platform;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -97,7 +98,7 @@ public class ClientConnection extends Thread {
                         if(drawing) {
                             try{
                                 Message msg = new Message(message);
-                                gui.serverDraw(msg);
+                                Platform.runLater(() -> gui.serverDraw(msg));
                             }catch(Exception _){
 
                             }
