@@ -26,3 +26,4 @@ out/
 
 ### Mac OS ###
 .DS_Store
+.idea/artifacts/Client_jar.xml

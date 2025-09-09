@@ -1,18 +1,42 @@
 # Udaljeno platno
 
-## Server strana
+Ovaj projekat predstavlja aplikaciju za zajedničko crtanje u realnom vremenu. Sastoji se od serverskog i klijentskog dijela: server upravlja prijemom i prosljeđivanjem poruka, dok klijenti omogućavaju korisnicima da crtaju na istom platnu. Novi korisnici pri povezivanju dobijaju trenutno stanje platna i nastavljaju da rade zajedno sa ostalima.
+
+# Client strana
+Ovo je klijentska strana aplikacije za zajedničko crtanje na udaljenom platnu. Više korisnika se može povezati na server, kreirati sobe, ulaziti u njih i crtati u realnom vremenu.
+
+### Pokretanje
+
+1. Pokrenuti server.
+2. Pokrenuti klijent iz klase `Client`
+3. Nakon unosa imena i povezivanja moguće je kreirati ili odabrati sobu i crtati zajedno sa drugim korisnicima.   
+
+
+## Struktura projekta
+
+- **ClientConnection.java** – upravlja mrežnom komunikacijom sa serverom (slanje i prijem poruka, poruke za crtanje, rad u posebnom thread-u).  
+- **ClientGUI.java** – glavni grafički interfejs. Omogućava pregled soba, ulazak u sobe i crtanje na zajedničkom platnu.  
+- **ClientGUIStart.java** – početna scena u kojoj se unosi ime i uspostavlja konekcija sa serverom.  
+- **CreateRoomScene.java** – forma za kreiranje novih soba.  
+
+
+## Funkcionalnosti
+
+- Pregled i osvežavanje liste soba  
+- Kreiranje sobe sa opcionalnom lozinkom  
+- Ulazak u sobu i crtanje u realnom vremenu  
+- Podrška za linije, pravougaonike, elipse i reset platna  
+- Izbor boje i debljine linije  
+- Automatska sinhronizacija svih poteza između klijenata  
+
+# Server strana
 
 Server strana je napisana u Javi koristeći NIO (non-blocking I/O) mehanizam. On komunicira sa klijentima putem unapred definisanih tekstualnih poruka.
 
 
-
 ## Pokretanje servera
 
-Server se pokreće putem glavne klase:
-
-```bash
-java Server.Server
-```
+Server se pokreće putem glavne klase `Server`
 
 Server koristi port `12345` i sluša dolazne konekcije na `localhost`.
 

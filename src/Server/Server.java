@@ -396,7 +396,7 @@ public class Server extends Application {
 
     /***************** GUI ************************/
 
-    private final boolean GUI = false;
+    private final boolean GUI = true;
     @Override
     public void start(Stage stage) throws Exception {
         if(!GUI)
